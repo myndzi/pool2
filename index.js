@@ -273,20 +273,26 @@ Pool.prototype._maybeAllocateResource = function () {
         }.bind(this);
         
         var timer = setTimeout(abort, this.pingTimeout);
-        
-        this._ping(res, function (err) {
-            clearTimeout(timer);
-            if (err) {
-                err.message = 'Ping failed, releasing resource: ' + err.message;
-                this.emit('warn', err);
-                abort();
-                return;
-            }
-            
-            var req = this.requests.shift();
-            debug('Allocating resource to request; waited %ds', ((new Date()) - req.ts) / 1000);
-            req.cb(null, res);
-        }.bind(this));
+
+        try {
+            this._ping(res, function (err) {
+                clearTimeout(timer);
+                if (err) {
+                    err.message = 'Ping failed, releasing resource: ' + err.message;
+                    this.emit('warn', err);
+                    abort();
+                    return;
+                }
+                
+                var req = this.requests.shift();
+                debug('Allocating resource to request; waited %ds', ((new Date()) - req.ts) / 1000);
+                req.cb(null, res);
+            }.bind(this));
+        } catch (err) {
+            err.message = 'Synchronous throw attempting to ping resource: ' + err.message;
+            this.emit('error', err);
+            abort();
+        }
         
         return;
     }
@@ -338,32 +344,36 @@ Pool.prototype._allocateResource = function () {
         setTimeout(this._ensureMinimum.bind(this), 2 * 1000);
     }.bind(this), this.acquireTimeout);
     
-    this._acquire(function (err, res) {
-        if (timer) {
-            clearTimeout(timer);
-            timer = null;
-            this.acquiring--;
-        } else if (!err) {
-            this.remove(res, true);
-            return;
-        }
-        
-        if (err) {
-            onError(err);
-            return;
-        }
-        
-        this.live = true;
-        
-        debug('Successfully allocated new resource (cur=%d, ac=%d)', this.pool.count(), this.acquiring);
-        
-        this.pool.set(res, new Date());
-        this.available.unshift(res);
-        
-        // we've successfully acquired a resource, and we only get
-        // here if something wants it, so... do that
-        this._maybeAllocateResource();
-    }.bind(this));
+    try {
+        this._acquire(function (err, res) {
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
+                this.acquiring--;
+            } else if (!err) {
+                this.remove(res, true);
+                return;
+            }
+            
+            if (err) {
+                onError(err);
+                return;
+            }
+            
+            this.live = true;
+            
+            debug('Successfully allocated new resource (cur=%d, ac=%d)', this.pool.count(), this.acquiring);
+            
+            this.pool.set(res, new Date());
+            this.available.unshift(res);
+            
+            // we've successfully acquired a resource, and we only get
+            // here if something wants it, so... do that
+            this._maybeAllocateResource();
+        }.bind(this));
+    } catch (e) {
+        onError(e);
+    }
 };
 
 // destroy the pool itself
