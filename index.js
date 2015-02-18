@@ -106,7 +106,7 @@ Pool.prototype.acquire = function (cb) {
 };
 
 // release the resource back into the pool
-Pool.prototype.release = function (res) {
+Pool.prototype.release = function (res) { // jshint maxstatements: 17
     var err;
     
     if (!this.pool.has(res)) {
