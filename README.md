@@ -49,3 +49,28 @@ A generic resource pool
 
     pool._destroyPool();
 
+
+## Clustering
+
+    var pool1 = new Pool(opts1),
+        pool2 = new Pool(opts2);
+        
+    var cluster = new Pool.Cluster([pool1, pool2]);
+    
+    cluster.acquire(function (err, rsrc) {
+        // do stuff
+        cluster.release(rsrc);
+    });
+    
+    cluster.acquire('read', function (err, rsrc) {
+        // if you specify a capability, only pools tagged with that capability
+        // will be used to serve the request
+    });
+    
+    cluster.addPool(new Pool(...));
+    var pool = cluster.pools[0];
+    cluster.removePool(pool);
+    
+    cluster.end(function (errs) {
+        // errs is an array of errors returned from ending the pools
+    });
