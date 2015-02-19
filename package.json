@@ -1,18 +1,31 @@
 {
   "name": "pool2",
   "version": "1.0.0",
-  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/myndzi/pool2"
+  },
+  "description": "Resource pool built with database drivers in mind",
+  "keywords": [
+    "database",
+    "pool",
+    "cluster"
+  ],
   "main": "index.js",
   "scripts": {
     "test": "mocha -u bdd -R spec --bail test/*.test.js;jshint lib/*.js",
     "cov": "istanbul cover node_modules/.bin/_mocha -- -u bdd -R spec --bail test/*.test.js;jshint lib/*.js"
   },
-  "author": "",
+  "author": "Kris Reeves",
   "license": "ISC",
   "dependencies": {
-    "bluebird": "^2.9.9",
     "double-ended-queue": "^2.1.0-0",
-    "hashmap": "^2.0.1",
-    "priorityqueuejs": "^0.2.0"
+    "hashmap": "^2.0.1"
+  },
+  "devDependencies": {
+    "istanbul": "^0.3.6",
+    "jshint": "^2.6.0",
+    "mocha": "^2.1.0",
+    "should": "^5.0.0"
   }
 }
