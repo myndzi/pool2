@@ -60,6 +60,15 @@ describe('Cluster', function () {
         
         cluster.acquire(done);
     });
+    it('Should error on releasing an invalid resource', function (done) {
+        var pool1 = new Pool({
+            acquire: acquireFn('pool1'),
+            release: noop
+        });
+        cluster = new Cluster(pool1);
+        cluster.on('error', done.bind(null, null));
+        cluster.release('foo');
+    });
     it('Should return from the pool with the most available / fewest queued requests', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
