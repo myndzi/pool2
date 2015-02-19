@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "mocha -u bdd -R spec --bail test.js;jshint index.js",
-    "cov": "istanbul cover node_modules/.bin/_mocha -- -u bdd -R spec --bail test.js;jshint index.js"
+    "test": "mocha -u bdd -R spec --bail test/*.test.js;jshint lib/*.js",
+    "cov": "istanbul cover node_modules/.bin/_mocha -- -u bdd -R spec --bail test/*.test.js;jshint lib/*.js"
   },
   "author": "",
   "license": "ISC",

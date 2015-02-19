@@ -2,7 +2,7 @@
 
 require('should');
 
-var Pool = require('./index');
+var Pool = require('..');
 
 describe('Pool', function () {
     var _seq = 0;
