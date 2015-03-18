@@ -37,7 +37,8 @@ A generic resource pool
         max: 10,
         allocated: 0,
         available: 0,
-        queued: 0
+        queued: 0,
+        maxRequests: Infinity
     } */
 
     pool.remove(rsrc);
