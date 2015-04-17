@@ -7,7 +7,7 @@ var Pool = require('..');
 describe('Pool', function () {
     var _seq = 0;
     function seqAcquire(cb) { cb(null, _seq++); }
-    function releaseStub(res, cb) { cb(); }
+    function disposeStub(res, cb) { cb(); }
 
     var pool;
     afterEach(function () { pool._destroyPool(); });
@@ -15,7 +15,7 @@ describe('Pool', function () {
     it('should honor resource limit', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub,
+            dispose: disposeStub,
             max: 1
         });
         
@@ -36,7 +36,7 @@ describe('Pool', function () {
     it('should allocate the minimum number of resources', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub,
+            dispose: disposeStub,
             min: 1
         });
         setTimeout(function () {
@@ -48,7 +48,7 @@ describe('Pool', function () {
     it('should emit an error if no initial resource can be acquired', function (done) {
         pool = new Pool({
             acquire: function (cb) { cb(new Error('fail')); },
-            release: releaseStub,
+            dispose: disposeStub,
             min: 1
         });
         pool.on('error', done.bind(null, null));
@@ -58,7 +58,7 @@ describe('Pool', function () {
         pool = new Pool({
             acquire: function () { },
             acquireTimeout: 10,
-            release: releaseStub,
+            dispose: disposeStub,
             min: 1
         });
         pool.on('error', done.bind(null, null));
@@ -67,7 +67,7 @@ describe('Pool', function () {
     it('should emit an error on releasing an invalid resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub
+            dispose: disposeStub
         });
         pool.on('error', done.bind(null, null));
         pool.release('foo');
@@ -76,7 +76,7 @@ describe('Pool', function () {
     it('should emit an error on releasing an idle resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub
+            dispose: disposeStub
         });
         pool.on('error', done.bind(null, null));
         pool.acquire(function (err, res) {
@@ -88,7 +88,7 @@ describe('Pool', function () {
     it('should emit an error on removing a non-member', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub
+            dispose: disposeStub
         });
         pool.on('error', done.bind(null, null));
         pool.remove('foo');
@@ -97,7 +97,7 @@ describe('Pool', function () {
     it('should allow .remove on an allocated resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: done.bind(null, null),
+            dispose: done.bind(null, null),
             min: 1,
             max: 1
         });
@@ -110,7 +110,7 @@ describe('Pool', function () {
     it('should allow .remove on an idle resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: done.bind(null, null),
+            dispose: done.bind(null, null),
             min: 1,
             max: 1
         });
@@ -125,7 +125,7 @@ describe('Pool', function () {
     it('should allow .destroy on an allocated resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub,
+            dispose: disposeStub,
             destroy: done.bind(null, null)
         });
         pool.acquire(function (err, res) {
@@ -136,7 +136,7 @@ describe('Pool', function () {
     it('should allow .destroy on an idle resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub,
+            dispose: disposeStub,
             destroy: done.bind(null, null)
         });
         
@@ -149,8 +149,8 @@ describe('Pool', function () {
     it('should call .destroy if .remove times out', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: function () { },
-            releaseTimeout: 50,
+            dispose: function () { },
+            disposeTimeout: 50,
             destroy: done.bind(null, null)
         });
         pool.acquire(function (err, res) {
@@ -161,7 +161,7 @@ describe('Pool', function () {
     it('should remove idle resources down to the minimum', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub,
+            dispose: disposeStub,
             syncInterval: 10,
             idleTimeout: 10,
             min: 1
@@ -181,7 +181,7 @@ describe('Pool', function () {
     it('should refill resources up to the minimum', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub,
+            dispose: disposeStub,
             syncInterval: 10,
             idleTimeout: 10,
             min: 1
@@ -200,7 +200,7 @@ describe('Pool', function () {
         var pings = 0;
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub,
+            dispose: disposeStub,
             ping: function (res, cb) { pings++; cb(); },
             min: 1,
             max: 1
@@ -216,7 +216,7 @@ describe('Pool', function () {
         var count = 0;
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub,
+            dispose: disposeStub,
             min: 1,
             max: 1
         });
@@ -237,7 +237,7 @@ describe('Pool', function () {
         var pings = 0, num;
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub,
+            dispose: disposeStub,
             ping: function (res, cb) {
                 pings++;
                 if (pings === 3) { cb(new Error('foo')); }
@@ -264,7 +264,7 @@ describe('Pool', function () {
     it('should fail acquire when pool is full', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub,
+            dispose: disposeStub,
             min: 1,
             max: 1,
             maxRequests: 1
@@ -284,7 +284,7 @@ describe('Pool', function () {
     it('should end gracefully (no resources)', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: releaseStub
+            dispose: disposeStub
         });
         
         pool.end(done);
@@ -293,7 +293,7 @@ describe('Pool', function () {
     it('should end gracefully (idle resources)', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: function (res, cb) { cb(); },
+            dispose: function (res, cb) { cb(); },
             min: 1
         });
         setTimeout(function () {
@@ -304,7 +304,7 @@ describe('Pool', function () {
     it('should end gracefully (allocated resources)', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: function (res, cb) { cb(); },
+            dispose: function (res, cb) { cb(); },
             min: 1
         });
         
@@ -319,7 +319,7 @@ describe('Pool', function () {
     it('should end gracefully (resources in allocation)', function (done) {
         pool = new Pool({
             acquire: function (cb) { setTimeout(cb.bind(null, null, { }), 100); },
-            release: releaseStub
+            dispose: disposeStub
         });
         
         pool.acquire(function (err, res) {
@@ -332,7 +332,7 @@ describe('Pool', function () {
     it('should end gracefully (min-fill with no pending requests)', function (done) {
         pool = new Pool({
             acquire: function (cb) { setTimeout(cb.bind(null, null, { }), 100); },
-            release: releaseStub,
+            dispose: disposeStub,
             min: 1
         });
         
@@ -347,7 +347,7 @@ describe('Pool', function () {
                 setTimeout(cb.bind(null, null, { }), dly);
                 dly += 33;
             },
-            release: function (res, cb) {
+            dispose: function (res, cb) {
                 num--;
                 cb();
             },
@@ -365,7 +365,7 @@ describe('Pool', function () {
     it('should fail acquire when ending', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: function (res, cb) { cb(); },
+            dispose: function (res, cb) { cb(); },
             min: 1
         });
         
@@ -379,7 +379,7 @@ describe('Pool', function () {
     it('should fail acquire when destroyed', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
-            release: function (res, cb) { cb(); },
+            dispose: function (res, cb) { cb(); },
             min: 1
         });
         
@@ -398,10 +398,10 @@ describe('Pool', function () {
                 else { cb(null, 'bar'); }
                 count++;
             },
-            release: function () { },
+            dispose: function () { },
             acquireTimeout: 10,
         });
-        pool._release = function (res, cb) {
+        pool._dispose = function (res, cb) {
             res.should.equal('foo');
             done();
         };
