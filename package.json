@@ -1,6 +1,6 @@
 {
   "name": "pool2",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "repository": {
     "type": "git",
     "url": "http://github.com/myndzi/pool2"
@@ -13,8 +13,8 @@
   ],
   "main": "index.js",
   "scripts": {
-    "test": "mocha -u bdd -R spec --bail test/*.test.js;jshint lib/*.js",
-    "cov": "istanbul cover node_modules/.bin/_mocha -- -u bdd -R spec --bail test/*.test.js;jshint lib/*.js"
+    "test": "NODE_ENV=testing mocha -u bdd -R spec --bail test/*.test.js;jshint lib/*.js",
+    "cov": "NODE_ENV=testing istanbul cover node_modules/.bin/_mocha -- -u bdd -R spec --bail test/*.test.js;jshint lib/*.js"
   },
   "author": "Kris Reeves",
   "license": "ISC",
