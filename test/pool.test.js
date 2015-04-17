@@ -408,5 +408,13 @@ describe('Pool', function () {
         pool.acquire(function (err, res) { });
         pool.acquire(function (err, res) { });
     });
+
+    it('should still support release', function() {
+        pool = new Pool({
+            acquire: function (cb) { cb(null, 'bar'); },
+            release: disposeStub,
+            min: 1
+        });
+    });
     
 });
