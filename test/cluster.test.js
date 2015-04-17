@@ -42,7 +42,7 @@ describe('Cluster', function () {
     it('Should instantiate with a singular argument', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
-            release: noop
+            dispose: noop
         });
 
         cluster = new Cluster(pool1);
@@ -51,10 +51,10 @@ describe('Cluster', function () {
     it('Should instantiate with an array', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
-            release: noop
+            dispose: noop
         }), pool2 = new Pool({
             acquire: acquireFn('pool2'),
-            release: noop
+            dispose: noop
         });
         cluster = new Cluster([pool1, pool2]);
         
@@ -63,7 +63,7 @@ describe('Cluster', function () {
     it('Should error on releasing an invalid resource', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
-            release: noop
+            dispose: noop
         });
         cluster = new Cluster(pool1);
         cluster.on('error', done.bind(null, null));
@@ -72,10 +72,10 @@ describe('Cluster', function () {
     it('Should return from the pool with the most available / fewest queued requests', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
-            release: noop
+            dispose: noop
         }), pool2 = new Pool({
             acquire: acquireFn('pool2'),
-            release: noop
+            dispose: noop
         });
         cluster = new Cluster([pool1, pool2]);
         
@@ -95,7 +95,7 @@ describe('Cluster', function () {
     it('Should error when requested capability is unavailable', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
-            release: noop,
+            dispose: noop,
             capabilities: ['read']
         });
         cluster = new Cluster(pool1);
@@ -108,11 +108,11 @@ describe('Cluster', function () {
     it('Should return only pools that match requested capabilities (subset)', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
-            release: noop,
+            dispose: noop,
             capabilities: ['read']
         }), pool2 = new Pool({
             acquire: acquireFn('pool2'),
-            release: noop,
+            dispose: noop,
             capabilities: ['read', 'write']
         });
         cluster = new Cluster([pool1, pool2]);
@@ -133,11 +133,11 @@ describe('Cluster', function () {
     it('Should return only pools that match requested capabilities (superset)', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
-            release: noop,
+            dispose: noop,
             capabilities: ['read']
         }), pool2 = new Pool({
             acquire: acquireFn('pool2'),
-            release: noop,
+            dispose: noop,
             capabilities: ['read', 'write']
         });
         cluster = new Cluster([pool1, pool2]);
@@ -158,11 +158,11 @@ describe('Cluster', function () {
     it('Should error if all pools are full', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
-            release: noop,
+            dispose: noop,
             max: 1
         }), pool2 = new Pool({
             acquire: acquireFn('pool2'),
-            release: noop,
+            dispose: noop,
             max: 1
         });
         cluster.acquire(function () { });
@@ -175,10 +175,10 @@ describe('Cluster', function () {
     it('Should wait and end cleanly', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
-            release: noop
+            dispose: noop
         }), pool2 = new Pool({
             acquire: acquireFn('pool2'),
-            release: noop
+            dispose: noop
         });
         cluster = new Cluster([pool1, pool2]);
         
@@ -190,7 +190,7 @@ describe('Cluster', function () {
     it('Should error on acquire when ended', function (done) {
         var pool1 = new Pool({
             acquire: acquireFn('pool1'),
-            release: noop
+            dispose: noop
         });
         cluster = new Cluster(pool1);
         
