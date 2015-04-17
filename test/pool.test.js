@@ -4,13 +4,92 @@ require('should');
 
 var Pool = require('..');
 
+describe('validNum', function () {
+    it('should return the default if opts doesn\'t exist', function () {
+        Pool._validNum(void 0, 'foo', 33).should.equal(33);
+    });
+    it('should return the default if opts has no own property \'val\'', function () {
+        Pool._validNum({ }, 'foo', 33).should.equal(33);
+        Pool._validNum(Object.create({ foo: 22 }), 'foo', 33).should.equal(33);
+    });
+    it('should return the specified key if it exists', function () {
+        Pool._validNum({ foo: 22 }, 'foo', 33).should.equal(22);
+    });
+    it('should throw if the value is not a positive integer', function () {
+        [1.2, -3, Infinity, new Date(), [ ], { }, 'keke', null, void 0]
+        .forEach(function (v) {
+            (function () {
+                Pool._validNum({ foo: v }, 'foo', 123);
+            }).should.throw(/must be a positive integer/);
+        });
+    });
+    it('should throw if the value is 0 unless allowZero is true', function () {
+        (function () {
+            Pool._validNum({ foo: 0 }, 'foo', 123);
+        }).should.throw(/cannot be 0/);
+        Pool._validNum({ foo: 0 }, 'foo', 123, true).should.equal(0);
+    });
+});
 describe('Pool', function () {
     var _seq = 0;
     function seqAcquire(cb) { cb(null, _seq++); }
     function disposeStub(res, cb) { cb(); }
-
+    function noop() { }
+    
     var pool;
     afterEach(function () { pool._destroyPool(); });
+
+    describe('constructor', function () {
+        ['acquire', 'dispose']
+        .forEach(function (k) {
+            var opts = {
+                acquire: 'foo',
+                dispose: 'foo'
+            };
+            delete opts[k];
+            it('should throw if '+k+' is not specified', function () {
+                (function () {
+                    new Pool(opts);
+                }).should.throw(new RegExp('opts\.'+k+' is required'));
+            });
+        });
+        
+        ['acquire', 'dispose', 'destroy', 'ping']
+        .forEach(function (k) {
+            var opts = {
+                acquire: noop,
+                dispose: noop,
+                destroy: noop,
+                ping: noop
+            };
+            opts[k] = 'foo';
+            it('should throw if '+k+' is not a function', function () {
+                (function () {
+                    new Pool(opts);
+                }).should.throw(new RegExp('opts\.'+k+' must be a function'));
+            });
+        });
+        it('should throw if min is greater than max', function () {
+            (function () {
+                new Pool({
+                    acquire: noop,
+                    dispose: noop,
+                    min: 3,
+                    max: 2
+                });
+            }).should.throw(/opts\.min cannot be greater than opts\.max/);
+        });
+        it('should throw if idleTimeout is specified when syncInterval is 0', function () {
+            (function () {
+                new Pool({
+                    acquire: noop,
+                    dispose: noop,
+                    syncInterval: 0,
+                    idleTimeout: 3
+                });
+            }).should.throw(/Cannot specify opts\.idleTimeout when opts\.syncInterval is 0/);
+        });
+    });
     
     it('should honor resource limit', function (done) {
         pool = new Pool({
@@ -409,12 +488,124 @@ describe('Pool', function () {
         pool.acquire(function (err, res) { });
     });
 
-    it('should still support release', function() {
+    it('should still support release', function(done) {
+        var called = false;
         pool = new Pool({
             acquire: function (cb) { cb(null, 'bar'); },
-            release: disposeStub,
+            release: function (res, cb) { called = true; cb(); },
             min: 1
+        });
+        
+        setTimeout(function () {
+            pool.end(function (err, res) {
+                (!err).should.be.ok;
+                called.should.equal(true);
+                done();
+            });
+        }, 50);
+    });
+    
+    it('should allow disabling of syncInterval', function () {
+        pool = new Pool({
+            acquire: seqAcquire,
+            dispose: disposeStub,
+            syncInterval: 0
+        });
+        // this is usually testing bad behavior, but in this case it's the only simple way to get the job done
+        pool.should.not.have.property('syncTimer');
+    });
+    
+    it('should fallback to destroy if disposeTimeout > 1', function (done) {
+        pool = new Pool({
+            acquire: seqAcquire,
+            dispose: function (res, cb) {
+                // time out
+            },
+            destroy: function (res) {
+                done();
+            },
+            disposeTimeout: 1
+        });
+        pool.acquire(function (err, res) {
+            pool.remove(res);
         });
     });
     
+    it('should not fallback to destroy if disposeTimeout = 0', function (done) {
+        var d = Pool.defaults.disposeTimeout,
+            destroyed = false;
+        
+        before(function () {
+            Pool.defaults.disposeTimeout = 1;
+        });
+        after(function () {
+            Pool.defaults.disposeTimeout = d;
+        });
+        
+        pool = new Pool({
+            acquire: seqAcquire,
+            dispose: function () {
+                // time out
+            },
+            destroy: function () {
+                destroyed = true;
+            },
+            disposeTimeout: 0
+        });
+        pool.acquire(function (err, res) {
+            pool.remove(res);
+            
+            setTimeout(function () {
+                destroyed.should.equal(false);
+                done();
+            }, 50);
+        });
+    });
+    
+    it('should emit an error if a resource cannot be acquired within acquireTimeout ms', function (done) {
+        pool = new Pool({
+            acquire: function () {
+                // time out
+            },
+            dispose: function () {
+            },
+            acquireTimeout: 1
+        });
+        pool.once('error', function (err) {
+            err.message.should.match(/Timed out acquiring resource/);
+            done();
+        });
+        pool.acquire(function () { });
+    });
+    
+    it('should not time out resource acquisition if acquireTimeout = 0', function (done) {
+        var a = Pool.defaults.acquireTimeout,
+            timedOut = false;
+        
+        before(function () {
+            Pool.defaults.acquireTimeout = 1;
+        });
+        after(function () {
+            Pool.defaults.acquireTimeout = a;
+        });
+        
+        pool = new Pool({
+            acquire: function () {
+                // time out
+            },
+            dispose: function () {
+            },
+            acquireTimeout: 0
+        });
+        pool.once('error', function (err) {
+            if (/Timed out acquiring resource/.test(err.message)) { timedOut = true; }
+            else { throw err; }
+        });
+        pool.acquire(function () { });
+        
+        setTimeout(function () {
+            timedOut.should.equal(false);
+            done();
+        }, 50);
+    });
 });
