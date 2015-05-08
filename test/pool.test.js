@@ -608,4 +608,20 @@ describe('Pool', function () {
             done();
         }, 50);
     });
+    
+    it('should reject pending resource requests when the pool is destroyed', function (done) {
+        pool = new Pool({
+            acquire: function () { },
+            dispose: function () { },
+            acquireTimeout: 0
+        });
+        
+        pool.acquire(function (err) {
+            err.should.match(/Pool was destroyed/);
+            done();
+        });
+        setTimeout(function () {
+            pool._destroyPool();
+        }, 50);
+    });
 });
