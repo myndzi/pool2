@@ -13,6 +13,7 @@
   ],
   "main": "index.js",
   "scripts": {
+    "bamp": "bamp",
     "test": "NODE_ENV=testing mocha -u bdd -R spec --bail test/*.test.js;jshint lib/*.js",
     "cov": "NODE_ENV=testing istanbul cover node_modules/.bin/_mocha -- -u bdd -R spec --bail test/*.test.js;jshint lib/*.js"
   },
