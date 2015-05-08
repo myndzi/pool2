@@ -24,6 +24,7 @@
     "hashmap": "^2.0.1"
   },
   "devDependencies": {
+    "bamp": "^1.0.11",
     "istanbul": "^0.3.6",
     "jshint": "^2.6.0",
     "mocha": "^2.1.0",
