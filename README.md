@@ -9,8 +9,8 @@ A generic resource pool
         acquire: function (cb) { cb(null, resource); },
         acquireTimeout: 30*1000,
 
-        release: function (res, cb) { cb(); },
-        releaseTimeout: 30*1000,
+        dispose: function (res, cb) { cb(); },
+        disposeTimeout: 30*1000,
 
         destroy: function () { },
 
