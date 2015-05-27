@@ -32,7 +32,7 @@ describe('validNum', function () {
 });
 describe('Pool', function () {
     var _seq = 0;
-    function seqAcquire(cb) { cb(null, _seq++); }
+    function seqAcquire(cb) { cb(null, { seq: _seq++ }); }
     function disposeStub(res, cb) { cb(); }
     function noop() { }
     
@@ -473,17 +473,21 @@ describe('Pool', function () {
         var count = 0;
         pool = new Pool({
             acquire: function (cb) {
-                if (count === 1) { setTimeout(cb.bind(null, null, 'foo'), 100); }
-                else { cb(null, 'bar'); }
+                if (count === 1) { setTimeout(cb.bind(null, null, { val: 'foo' }), 100); }
+                else { cb(null, { val: 'bar' }); }
                 count++;
             },
-            dispose: function () { },
+            dispose: function (res, cb) {
+                try {
+                    res.should.eql({ val: 'foo' });
+                    done();
+                } catch (e) {
+                    done(e);
+                }
+            },
             acquireTimeout: 10,
         });
-        pool._dispose = function (res, cb) {
-            res.should.equal('foo');
-            done();
-        };
+        
         pool.acquire(function (err, res) { });
         pool.acquire(function (err, res) { });
     });
