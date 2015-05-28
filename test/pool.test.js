@@ -628,4 +628,20 @@ describe('Pool', function () {
             pool._destroyPool();
         }, 50);
     });
+    
+    it('should not overallocate resources while waiting on a ping (#10)', function (done) {
+        var acquires = 0;
+        pool = new Pool({
+            acquire: function (cb) {
+                acquires++;
+                setTimeout(seqAcquire.bind(null, cb), 50);
+            },
+            dispose: disposeStub,
+            min: 1
+        });
+        pool.acquire(function (err, res) {
+            acquires.should.equal(1);
+            done();
+        });
+    });
 });
