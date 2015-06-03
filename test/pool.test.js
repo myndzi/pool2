@@ -501,21 +501,28 @@ describe('Pool', function () {
                 cb();
             }
         });
-        var count = 2;
+        var count = 3;
         var doDone = function(err) {
             if (--count) { return; }
             done(err);
         };
-        pool.acquire(function (err, res) {
-            pool.end(function (err) {
-                released.should.equal(true);
-                doDone(err);
+        pool.acquire(function (err, res1) {
+            pool.acquire(function (err, res2) {
+                pool.end(function (err) {
+                    released.should.equal(true);
+                    doDone(err);
+                });
+                setTimeout(function () {
+                    released.should.equal(false);
+                    pool.release(res1);
+                    doDone();
+                }, 50);
+                setTimeout(function () {
+                    released.should.equal(false);
+                    pool.release(res2);
+                    doDone();
+                }, 100);
             });
-            setTimeout(function () {
-                released.should.equal(false);
-                pool.release(res);
-                doDone();
-            }, 50);
         });
     });
 
