@@ -491,6 +491,33 @@ describe('Pool', function () {
         pool.acquire(function (err, res) { });
         pool.acquire(function (err, res) { });
     });
+    
+    it('should wait for resources to be released back to the pool before ending', function (done) {
+        var released = false;
+        pool = new Pool({
+            acquire: seqAcquire,
+            dispose: function (res, cb) {
+                released = true;
+                cb();
+            }
+        });
+        var count = 2;
+        var doDone = function(err) {
+            if (--count) { return; }
+            done(err);
+        };
+        pool.acquire(function (err, res) {
+            pool.end(function (err) {
+                released.should.equal(true);
+                doDone(err);
+            });
+            setTimeout(function () {
+                released.should.equal(false);
+                pool.release(res);
+                doDone();
+            }, 50);
+        });
+    });
 
     it('should still support release', function(done) {
         var called = false;
