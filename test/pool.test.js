@@ -678,4 +678,37 @@ describe('Pool', function () {
             done();
         });
     });
+    
+    it('should not call back the allocation request if a ping times out (#14)', function (done) {
+        var pinged = false, acquires = 0;
+        pool = new Pool({
+            acquire: function (cb) {
+                acquires++;
+                seqAcquire(cb);
+            },
+            pingTimeout: 20,
+            ping: function (res, cb) {
+                if (pinged) {
+                    // we've already timed out a ping, succeed the rest immediately
+                    cb();
+                  
+                    // also set a timer to finish up the test later
+                    setTimeout(function () {
+                        acquires.should.equal(2);
+                        done();
+                    }, 100);
+                } else {
+                    // force a successful callback after the ping timeout
+                    setTimeout(cb, 50);
+                }
+                pinged = true;
+            },
+            dispose: disposeStub,
+            min: 1
+        });
+        pool.once('error', done);
+        pool.acquire(function (err, res) {
+            pool.release(res);
+        });
+    });
 });
