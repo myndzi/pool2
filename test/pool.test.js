@@ -143,6 +143,53 @@ describe('Pool', function () {
         pool.on('error', done.bind(null, null));
     });
     
+    it('should retry initial connections until bailAfter is exceeded', function (done) {
+        var retries = 0;
+        pool = new Pool({
+            acquire: function (cb) {
+              retries++;
+              cb(new Error('fail'));
+            },
+            dispose: disposeStub,
+            bailAfter: 100,
+            min: 1
+        });
+        pool.on('error', function () {
+            retries.should.be.above(1);
+            done();
+        });
+    });
+    
+    it('should pass along backoff options', function (done) {
+        var retries = 0;
+        pool = new Pool({
+            acquire: function (cb) {
+              retries++;
+              cb(new Error('fail'));
+            },
+            dispose: disposeStub,
+            bailAfter: 100,
+            min: 1,
+            backoff: {
+                min: 150
+            }
+        });
+        pool.on('error', function () {
+            // one for the initial attempt
+            // one for the attempt that causes the error to be emitted
+            retries.should.equal(2);
+            done();
+        });
+    });
+    
+    it('should allow Infinity for bailAfter', function () {
+        pool = new Pool({
+            acquire: seqAcquire,
+            dispose: disposeStub,
+            bailAfter: Infinity
+        });
+    });
+    
     it('should emit an error on releasing an invalid resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
