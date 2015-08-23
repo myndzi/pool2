@@ -758,4 +758,65 @@ describe('Pool', function () {
             pool.release(res);
         });
     });
+    
+    it('should emit warnings for resource request errors', function (done) {
+        pool = new Pool({
+            acquire: noop,
+            dispose: noop
+        });
+        
+        pool.once('warn', function (err) {
+            err.should.match(/foo/);
+        });
+        
+        var res = pool.acquire(function (err) {
+            err.should.match(/aborted/);
+            done();
+        });
+        res.abort('foo');
+    });
+    
+    it('should correctly create requests with timeout durations when configured', function (done) {
+        pool = new Pool({
+            acquire: noop,
+            dispose: noop,
+            requestTimeout: 10
+        });
+        pool.acquire(function (err) {
+            err.should.match(/timed out/);
+            done();
+        });
+    });
+    
+    it('should create requests without timeout durations when not configured', function () {
+        pool = new Pool({
+            acquire: noop,
+            dispose: noop
+        });
+        var res = pool.acquire(noop);
+        (res.timer === null).should.be.ok;
+    });
+    
+    it('should emit a \'request\' event when creating a new resource request', function (done) {
+        pool = new Pool({
+            acquire: noop,
+            dispose: noop
+        });
+        pool.once('request', done.bind(null, null));
+        pool.acquire(noop);
+    });
+    
+    it('should emit a \'requeue\' event with the request when the request is requeued', function (done) {
+        pool = new Pool({
+            acquire: seqAcquire,
+            dispose: noop,
+            ping: function (res, cb) { cb(new Error('foo')); }
+        });
+        var req = pool.acquire(noop);
+        pool.once('requeue', function (_req) {
+            _req.should.equal(req);
+            req.abort();
+            done();
+        });
+    });
 });
