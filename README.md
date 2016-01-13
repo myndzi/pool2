@@ -25,6 +25,7 @@ The values below are the defaults
         max: 10,
 
         maxRequests: Infinity,
+        requestTimeout: Infinity,
 
         idleTimeout: 60*1000,
         syncInterval: 10*1000,
@@ -90,7 +91,10 @@ An integer greater than zero. The minimum number of resources to maintain in the
 An integer greater than or equal to `min`. The maximum number of resources the pool may contain. Requests for resources will not cause new resources to be allocated when this number of resources are currently held in the pool (whether checked out or not). If all resources are checked out, requests are queued until one becomes available.
 
 ### maxRequests
-An integer greater than 0 (`Infinity` is also valid), to specify the maximum number of requests that the pool instance will allow. If the request queue exceeds this number, calls to `acquire` will fail with the error `Pool is full`. 
+An integer greater than 0 (`Infinity` is also valid), to specify the maximum number of requests that the pool instance will allow. If the request queue exceeds this number, calls to `acquire` will fail with the error `Pool is full`.
+
+### requestTimeout
+An integer, in milliseconds (`Infinity` is also valid), to specify how long to wait for a successful resource request before failing.
 
 ### idleTimeout
 An integer, in milliseconds, to specify how long a resource must be idle before it may be disposed of. Resources are periodically checked (see `syncInterval` below) for idleness, and idle resources are disposed of unless they would bring the pool below the configured `min` value.
@@ -138,7 +142,7 @@ Example:
 
     pool.end(function (errors) {
         if (!errors.length) { return; }
-        console.error('Encountered some errors while shutting down:', errors); 
+        console.error('Encountered some errors while shutting down:', errors);
     });
 
 ### pool._destroyPool()
@@ -148,23 +152,23 @@ This is an internal method used by pool2 itself primarily during testing. Reject
 
     var pool1 = new Pool(opts1),
         pool2 = new Pool(opts2);
-        
+
     var cluster = new Pool.Cluster([pool1, pool2]);
-    
+
     cluster.acquire(function (err, rsrc) {
         // do stuff
         cluster.release(rsrc);
     });
-    
+
     cluster.acquire('read', function (err, rsrc) {
         // if you specify a capability, only pools tagged with that capability
         // will be used to serve the request
     });
-    
+
     cluster.addPool(new Pool(...));
     var pool = cluster.pools[0];
     cluster.removePool(pool);
-    
+
     cluster.end(function (errs) {
         // errs is an array of errors returned from ending the pools
     });
@@ -185,7 +189,7 @@ Remove a pool from the cluster.
 An array of pools in the cluster.
 
 ### cluster.acquire(callback)
-Just like `pool.acquire`, except it draws a resource from any of the pools in the cluster. Resources are drawn from the pool with the most idle resources first; otherwise, order is undefined. 
+Just like `pool.acquire`, except it draws a resource from any of the pools in the cluster. Resources are drawn from the pool with the most idle resources first; otherwise, order is undefined.
 
 ### cluster.acquire('capability', callback)
 Like `cluster.acquire`, except only pools that list `'capability'` in their `capabilities` array are considered.
