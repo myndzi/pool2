@@ -137,5 +137,19 @@ describe('ResourceRequest', function () {
         });
         res.reject(new Error('bar'));
     });
-    
+    it('should not throw synchronously when setting a timeout that has already expired', function (done) {
+        var res = new ResourceRequest(1000, function (err) {
+            err.should.match(/timed out/);
+        });
+        setTimeout(function () {
+            try {
+                res.setTimeout(1);
+            } catch (e) {
+                done(new Error('Caught synchronous throw from ResourceRequest.setTimeout'));
+            }
+            res.on('error', function () {
+                done();
+            });
+        }, 25);
+    });
 });
