@@ -819,4 +819,71 @@ describe('Pool', function () {
             done();
         });
     });
+    
+    it('should not allocate resource if there\'s no request to fill', function (done) {
+        var num = 0;
+        pool = new Pool({
+            acquire: function (cb) {
+                num++;
+                // acquire needs to take longer than the request to time out
+                setTimeout(function () {
+                    cb(null, { });
+                }, 50);
+            },
+            dispose: function () {
+                num--;
+            },
+            requestTimeout: 1,
+            max: 1
+        });
+        
+        // generate a request so a resource will be allocated
+        pool.acquire(function (err) {
+            err.should.match(/timed out/);
+            
+            // the request has timed out but the resource allocation is still pending
+            // we need to wait for the resource allocation to succeed before checking
+            // that things are resolved correctly
+            setTimeout(function () {
+                // the number of resources in the pool should equal the tally we kept via acquire/dispose
+                pool.available.length.should.equal(num);
+                done();
+            }, 75);
+        });
+    });
+    
+    it('should correctly release resource after successful ping when request has been fulfilled', function (done) {
+        var num = 0;
+        pool = new Pool({
+            acquire: function (cb) {
+                num++;
+                cb(null, { });
+            },
+            dispose: function () {
+                num--;
+            },
+            ping: function (res, cb) {
+                // ping needs to take longer than the request to time out
+                setTimeout(function () {
+                    cb();
+                }, 50);
+            },
+            requestTimeout: 1,
+            max: 1
+        });
+        
+        // generate a request so a resource will be allocated
+        pool.acquire(function (err) {
+            err.should.match(/timed out/);
+            
+            // the request has timed out but the resource allocation is still pending
+            // we need to wait for the resource allocation to succeed before checking
+            // that things are resolved correctly
+            setTimeout(function () {
+                // the number of resources in the pool should equal the tally we kept via acquire/dispose
+                pool.available.length.should.equal(num);
+                done();
+            }, 75);
+        });
+    });
 });
