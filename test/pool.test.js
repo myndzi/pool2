@@ -35,7 +35,7 @@ describe('Pool', function () {
     function seqAcquire(cb) { cb(null, { seq: _seq++ }); }
     function disposeStub(res, cb) { cb(); }
     function noop() { }
-    
+
     var pool;
     afterEach(function () { pool._destroyPool(); });
 
@@ -53,7 +53,7 @@ describe('Pool', function () {
                 }).should.throw(new RegExp('opts\.'+k+' is required'));
             });
         });
-        
+
         ['acquire', 'dispose', 'destroy', 'ping']
         .forEach(function (k) {
             var opts = {
@@ -89,15 +89,31 @@ describe('Pool', function () {
                 });
             }).should.throw(/Cannot specify opts\.idleTimeout when opts\.syncInterval is 0/);
         });
+        it('should allow Infinity for maxRequests', function () {
+            new Pool({
+                acquire: noop,
+                dispose: noop,
+                maxRequests: Infinity
+            });
+        });
+        it('should not allow 0 for maxRequests', function () {
+            (function () {
+                new Pool({
+                    acquire: noop,
+                    dispose: noop,
+                    maxRequests: 0
+                });
+            }).should.throw(/maxRequests cannot be 0/);
+        });
     });
-    
+
     it('should honor resource limit', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
             dispose: disposeStub,
             max: 1
         });
-        
+
         var waited = false;
         pool.acquire(function (err, res) {
             pool.acquire(function (err, res) {
@@ -111,7 +127,7 @@ describe('Pool', function () {
             }, 100);
         });
     });
-    
+
     it('should allocate the minimum number of resources', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -123,7 +139,7 @@ describe('Pool', function () {
             done();
         }, 100);
     });
-    
+
     it('should emit an error if no initial resource can be acquired', function (done) {
         pool = new Pool({
             acquire: function (cb) { cb(new Error('fail')); },
@@ -132,7 +148,7 @@ describe('Pool', function () {
         });
         pool.on('error', done.bind(null, null));
     });
-    
+
     it('should emit an error if no initial resource can be acquired (timeout)', function (done) {
         pool = new Pool({
             acquire: function () { },
@@ -142,7 +158,7 @@ describe('Pool', function () {
         });
         pool.on('error', done.bind(null, null));
     });
-    
+
     it('should retry initial connections until bailAfter is exceeded', function (done) {
         var retries = 0;
         pool = new Pool({
@@ -159,7 +175,7 @@ describe('Pool', function () {
             done();
         });
     });
-    
+
     it('should pass along backoff options', function (done) {
         var retries = 0;
         pool = new Pool({
@@ -181,7 +197,7 @@ describe('Pool', function () {
             done();
         });
     });
-    
+
     it('should allow Infinity for bailAfter', function () {
         pool = new Pool({
             acquire: seqAcquire,
@@ -189,7 +205,7 @@ describe('Pool', function () {
             bailAfter: Infinity
         });
     });
-    
+
     it('should emit an error on releasing an invalid resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -198,7 +214,7 @@ describe('Pool', function () {
         pool.on('error', done.bind(null, null));
         pool.release('foo');
     });
-    
+
     it('should emit an error on releasing an idle resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -210,7 +226,7 @@ describe('Pool', function () {
             pool.release(res);
         });
     });
-    
+
     it('should emit an error on removing a non-member', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -219,7 +235,7 @@ describe('Pool', function () {
         pool.on('error', done.bind(null, null));
         pool.remove('foo');
     });
-    
+
     it('should allow .remove on an allocated resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -232,7 +248,7 @@ describe('Pool', function () {
             pool.stats().allocated.should.equal(0);
         });
     });
-    
+
     it('should allow .remove on an idle resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -240,14 +256,14 @@ describe('Pool', function () {
             min: 1,
             max: 1
         });
-        
+
         pool.acquire(function (err, res) {
             pool.release(res);
             pool.remove(res);
             pool.stats().allocated.should.equal(0);
         });
     });
-    
+
     it('should allow .destroy on an allocated resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -258,20 +274,20 @@ describe('Pool', function () {
             pool.destroy(res);
         });
     });
-    
+
     it('should allow .destroy on an idle resource', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
             dispose: disposeStub,
             destroy: done.bind(null, null)
         });
-        
+
         pool.acquire(function (err, res) {
             pool.release(res);
             pool.destroy(res);
         });
     });
-    
+
     it('should call .destroy if .remove times out', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -283,7 +299,7 @@ describe('Pool', function () {
             pool.remove(res);
         });
     });
-    
+
     it('should remove idle resources down to the minimum', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -303,7 +319,7 @@ describe('Pool', function () {
             });
         });
     });
-    
+
     it('should refill resources up to the minimum', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -314,14 +330,14 @@ describe('Pool', function () {
         });
         pool.acquire(function (err, res) {
             pool.remove(res);
-            
+
             setTimeout(function () {
                 pool.stats().allocated.should.equal(1);
                 done();
             }, 100);
         });
     });
-    
+
     it('should ping resources before use', function (done) {
         var pings = 0;
         pool = new Pool({
@@ -337,7 +353,7 @@ describe('Pool', function () {
             done();
         });
     });
-    
+
     it('should execute requests in order', function (done) {
         var count = 0;
         pool = new Pool({
@@ -386,7 +402,7 @@ describe('Pool', function () {
             done();
         });
     });
-    
+
     it('should fail acquire when pool is full', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -406,16 +422,16 @@ describe('Pool', function () {
             });
         });
     });
-    
+
     it('should end gracefully (no resources)', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
             dispose: disposeStub
         });
-        
+
         pool.end(done);
     });
-    
+
     it('should end gracefully (idle resources)', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -426,14 +442,14 @@ describe('Pool', function () {
             pool.end(done);
         }, 100);
     });
-    
+
     it('should end gracefully (allocated resources)', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
             dispose: function (res, cb) { cb(); },
             min: 1
         });
-        
+
         pool.acquire(function (err, res) {
             setTimeout(function () {
                 pool.release(res);
@@ -441,30 +457,30 @@ describe('Pool', function () {
         });
         pool.end(done);
     });
-    
+
     it('should end gracefully (resources in allocation)', function (done) {
         pool = new Pool({
             acquire: function (cb) { setTimeout(cb.bind(null, null, { }), 100); },
             dispose: disposeStub
         });
-        
+
         pool.acquire(function (err, res) {
             pool.release(res);
         });
-        
+
         setTimeout(pool.end.bind(pool, done), 50);
     });
-    
+
     it('should end gracefully (min-fill with no pending requests)', function (done) {
         pool = new Pool({
             acquire: function (cb) { setTimeout(cb.bind(null, null, { }), 100); },
             dispose: disposeStub,
             min: 1
         });
-        
+
         setTimeout(pool.end.bind(pool, done), 50);
     });
-    
+
     it('should end gracefully (min-fill with no pending requests, min > 1)', function (done) {
         var dly = 66, num = 0;
         pool = new Pool({
@@ -479,7 +495,7 @@ describe('Pool', function () {
             },
             min: 2
         });
-        
+
         setTimeout(function () {
             pool.end(function () {
                 num.should.equal(0);
@@ -487,35 +503,35 @@ describe('Pool', function () {
             });
         }, 33);
     });
-    
+
     it('should fail acquire when ending', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
             dispose: function (res, cb) { cb(); },
             min: 1
         });
-        
+
         pool.end();
         pool.acquire(function (err, res) {
             err.message.should.match(/ending/);
             done();
         });
     });
-    
+
     it('should fail acquire when destroyed', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
             dispose: function (res, cb) { cb(); },
             min: 1
         });
-        
+
         pool._destroyPool();
         pool.acquire(function (err, res) {
             err.message.should.match(/destroyed/);
             done();
         });
     });
-    
+
     it('should attempt to nicely release resources that arrived late', function (done) {
         var count = 0;
         pool = new Pool({
@@ -534,11 +550,11 @@ describe('Pool', function () {
             },
             acquireTimeout: 10,
         });
-        
+
         pool.acquire(function (err, res) { });
         pool.acquire(function (err, res) { });
     });
-    
+
     it('should wait for resources to be released back to the pool before ending', function (done) {
         var released = false;
         pool = new Pool({
@@ -580,7 +596,7 @@ describe('Pool', function () {
             release: function (res, cb) { called = true; cb(); },
             min: 1
         });
-        
+
         setTimeout(function () {
             pool.end(function (err, res) {
                 (!err).should.be.ok;
@@ -589,7 +605,7 @@ describe('Pool', function () {
             });
         }, 50);
     });
-    
+
     it('should allow disabling of syncInterval', function () {
         pool = new Pool({
             acquire: seqAcquire,
@@ -599,7 +615,7 @@ describe('Pool', function () {
         // this is usually testing bad behavior, but in this case it's the only simple way to get the job done
         pool.should.not.have.property('syncTimer');
     });
-    
+
     it('should fallback to destroy if disposeTimeout > 1', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -615,18 +631,18 @@ describe('Pool', function () {
             pool.remove(res);
         });
     });
-    
+
     it('should not fallback to destroy if disposeTimeout = 0', function (done) {
         var d = Pool.defaults.disposeTimeout,
             destroyed = false;
-        
+
         before(function () {
             Pool.defaults.disposeTimeout = 1;
         });
         after(function () {
             Pool.defaults.disposeTimeout = d;
         });
-        
+
         pool = new Pool({
             acquire: seqAcquire,
             dispose: function () {
@@ -639,14 +655,14 @@ describe('Pool', function () {
         });
         pool.acquire(function (err, res) {
             pool.remove(res);
-            
+
             setTimeout(function () {
                 destroyed.should.equal(false);
                 done();
             }, 50);
         });
     });
-    
+
     it('should emit an error if a resource cannot be acquired within acquireTimeout ms', function (done) {
         pool = new Pool({
             acquire: function () {
@@ -662,18 +678,18 @@ describe('Pool', function () {
         });
         pool.acquire(function () { });
     });
-    
+
     it('should not time out resource acquisition if acquireTimeout = 0', function (done) {
         var a = Pool.defaults.acquireTimeout,
             timedOut = false;
-        
+
         before(function () {
             Pool.defaults.acquireTimeout = 1;
         });
         after(function () {
             Pool.defaults.acquireTimeout = a;
         });
-        
+
         pool = new Pool({
             acquire: function () {
                 // time out
@@ -687,20 +703,20 @@ describe('Pool', function () {
             else { throw err; }
         });
         pool.acquire(function () { });
-        
+
         setTimeout(function () {
             timedOut.should.equal(false);
             done();
         }, 50);
     });
-    
+
     it('should reject pending resource requests when the pool is destroyed', function (done) {
         pool = new Pool({
             acquire: function () { },
             dispose: function () { },
             acquireTimeout: 0
         });
-        
+
         pool.acquire(function (err) {
             err.should.match(/Pool was destroyed/);
             done();
@@ -709,7 +725,7 @@ describe('Pool', function () {
             pool._destroyPool();
         }, 50);
     });
-    
+
     it('should not overallocate resources while waiting on a ping (#10)', function (done) {
         var acquires = 0;
         pool = new Pool({
@@ -725,7 +741,7 @@ describe('Pool', function () {
             done();
         });
     });
-    
+
     it('should not call back the allocation request if a ping times out (#14)', function (done) {
         var pinged = false, acquires = 0;
         pool = new Pool({
@@ -738,7 +754,7 @@ describe('Pool', function () {
                 if (pinged) {
                     // we've already timed out a ping, succeed the rest immediately
                     cb();
-                  
+
                     // also set a timer to finish up the test later
                     setTimeout(function () {
                         acquires.should.equal(2);
@@ -758,24 +774,24 @@ describe('Pool', function () {
             pool.release(res);
         });
     });
-    
+
     it('should emit warnings for resource request errors', function (done) {
         pool = new Pool({
             acquire: noop,
             dispose: noop
         });
-        
+
         pool.once('warn', function (err) {
             err.should.match(/foo/);
         });
-        
+
         var res = pool.acquire(function (err) {
             err.should.match(/aborted/);
             done();
         });
         res.abort('foo');
     });
-    
+
     it('should correctly create requests with timeout durations when configured', function (done) {
         pool = new Pool({
             acquire: noop,
@@ -787,7 +803,7 @@ describe('Pool', function () {
             done();
         });
     });
-    
+
     it('should create requests without timeout durations when not configured', function () {
         pool = new Pool({
             acquire: noop,
@@ -796,7 +812,7 @@ describe('Pool', function () {
         var res = pool.acquire(noop);
         (res.timer === null).should.be.ok;
     });
-    
+
     it('should emit a \'request\' event when creating a new resource request', function (done) {
         pool = new Pool({
             acquire: noop,
@@ -805,7 +821,7 @@ describe('Pool', function () {
         pool.once('request', done.bind(null, null));
         pool.acquire(noop);
     });
-    
+
     it('should emit a \'requeue\' event with the request when the request is requeued', function (done) {
         pool = new Pool({
             acquire: seqAcquire,
@@ -819,7 +835,7 @@ describe('Pool', function () {
             done();
         });
     });
-    
+
     it('should not allocate resource if there\'s no request to fill', function (done) {
         var num = 0;
         pool = new Pool({
@@ -836,11 +852,11 @@ describe('Pool', function () {
             requestTimeout: 1,
             max: 1
         });
-        
+
         // generate a request so a resource will be allocated
         pool.acquire(function (err) {
             err.should.match(/timed out/);
-            
+
             // the request has timed out but the resource allocation is still pending
             // we need to wait for the resource allocation to succeed before checking
             // that things are resolved correctly
@@ -851,7 +867,7 @@ describe('Pool', function () {
             }, 75);
         });
     });
-    
+
     it('should correctly release resource after successful ping when request has been fulfilled', function (done) {
         var num = 0;
         pool = new Pool({
@@ -871,11 +887,11 @@ describe('Pool', function () {
             requestTimeout: 1,
             max: 1
         });
-        
+
         // generate a request so a resource will be allocated
         pool.acquire(function (err) {
             err.should.match(/timed out/);
-            
+
             // the request has timed out but the resource allocation is still pending
             // we need to wait for the resource allocation to succeed before checking
             // that things are resolved correctly
