@@ -39,36 +39,134 @@ describe('Pool', function () {
     var pool;
     afterEach(function () { pool._destroyPool(); });
 
+    var TYPES = {
+        undefined: void 0,
+        null: null,
+        positiveInteger: 1,
+        positiveDecimal: 1.5,
+        positiveInfinity: Infinity,
+        zero: 0,
+        negativeInteger: -1,
+        negativeDecimal: -1.5,
+        negativeInfinity: -Infinity,
+        object: { },
+        array: [ ],
+        date: new Date(),
+        string: 'foo',
+        booleanTrue: true,
+        booleanFalse: false,
+        function: function () { }
+    };
+
+    var OPTS = {
+        acquire: {
+            required: true,
+            valids: [ TYPES.function ]
+        },
+        acquireTimeout: {
+            valids: [ TYPES.zero, TYPES.positiveInteger ]
+        },
+        dispose: {
+            required: true,
+            valids: [ TYPES.function ]
+        },
+        disposeTimeout: {
+            valids: [ TYPES.zero, TYPES.positiveInteger ]
+        },
+        destroy: {
+            valids: [ TYPES.function ]
+        },
+        ping: {
+            valids: [ TYPES.function ]
+        },
+        pingTimeout: {
+            valids: [ TYPES.positiveInteger ]
+        },/* capabilities currently isn't checked very strictly
+        capabilities: {
+            valids: [ TYPES.array ]
+        },*/
+        min: {
+            valids: [ TYPES.zero, TYPES.positiveInteger ]
+        },
+        max: {
+            valids: [ TYPES.positiveInteger ]
+        },
+        maxRequests: {
+            valids: [ TYPES.positiveInteger, TYPES.positiveInfinity ]
+        },
+        requestTimeout: {
+            valids: [ TYPES.positiveInteger, TYPES.positiveInfinity ]
+        },
+        idleTimeout: {
+            valids: [ TYPES.positiveInteger ]
+        },
+        syncInterval: {
+            valids: [ TYPES.zero, TYPES.positiveInteger ]
+        },/* backoff is passed to the simple-backoff constructor as-is
+        backoff: {
+            valids: [ TYPES.object ]
+        },*/
+        bailAfter: {
+            valids: [ TYPES.zero, TYPES.positiveInteger, TYPES.positiveInfinity ]
+        }
+    };
+
     describe('constructor', function () {
-        ['acquire', 'dispose']
-        .forEach(function (k) {
-            var opts = {
-                acquire: 'foo',
-                dispose: 'foo'
-            };
-            delete opts[k];
-            it('should throw if '+k+' is not specified', function () {
-                (function () {
-                    new Pool(opts);
-                }).should.throw(new RegExp('opts\.'+k+' is required'));
+        // generate options of all types and ensure they behave as expected according to config above
+
+        var opts;
+        beforeEach(function () {
+            opts = { };
+            Object.keys(OPTS).forEach(function (k) {
+                if (OPTS[k].required) {
+                    opts[k] = OPTS[k].valids[0];
+                }
             });
         });
 
-        ['acquire', 'dispose', 'destroy', 'ping']
-        .forEach(function (k) {
-            var opts = {
-                acquire: noop,
-                dispose: noop,
-                destroy: noop,
-                ping: noop
-            };
-            opts[k] = 'foo';
-            it('should throw if '+k+' is not a function', function () {
-                (function () {
-                    new Pool(opts);
-                }).should.throw(new RegExp('opts\.'+k+' must be a function'));
+        Object.keys(OPTS).forEach(function (k) {
+            var cfg = OPTS[k];
+            describe(k, function () {
+                if (cfg.required) {
+                    it('should throw if '+k+' is missing', function () {
+                        delete opts[k];
+                        (function () {
+                            new Pool(opts);
+                        }).should.throw(/required/);
+                    });
+                }
+                Object.keys(TYPES).forEach(function (t) {
+                    var isValid = cfg.valids.indexOf(TYPES[t]) > -1;
+                    if (isValid) {
+                        it('should allow '+k+' to be '+t, function () {
+                            opts[k] = TYPES[t];
+                            new Pool(opts);
+                        });
+                        if (!cfg.required) {
+                            it('should have a default value assigned', function () {
+                                Pool.defaults.should.have.property(k);
+                            });
+                            it('should allow '+t+' as a default value', function () {
+                                var dflt = Pool.defaults[k];
+                                after(function () { Pool.defaults[k] = dflt; });
+
+                                Pool.defaults[k] = TYPES[t];
+                                new Pool(opts);
+                            });
+                        }
+                    } else {
+                        it('should throw if '+k+' is '+t, function () {
+                            opts[k] = TYPES[t];
+                            (function () {
+                                new Pool(opts);
+                            }).should.throw(/must be|cannot be/);
+                        });
+                    }
+                });
             });
         });
+
+        // a couple extra sanity checks
         it('should throw if min is greater than max', function () {
             (function () {
                 new Pool({
@@ -88,22 +186,6 @@ describe('Pool', function () {
                     idleTimeout: 3
                 });
             }).should.throw(/Cannot specify opts\.idleTimeout when opts\.syncInterval is 0/);
-        });
-        it('should allow Infinity for maxRequests', function () {
-            new Pool({
-                acquire: noop,
-                dispose: noop,
-                maxRequests: Infinity
-            });
-        });
-        it('should not allow 0 for maxRequests', function () {
-            (function () {
-                new Pool({
-                    acquire: noop,
-                    dispose: noop,
-                    maxRequests: 0
-                });
-            }).should.throw(/maxRequests cannot be 0/);
         });
     });
 
