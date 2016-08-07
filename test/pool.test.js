@@ -992,7 +992,7 @@ describe('Pool', function () {
                 if (num++ === 1) { return; }
                 cb(null, num);
             },
-            dispose: noop,
+            dispose: disposeStub,
             acquireTimeout: 50,
             min: 0,
             max: 1
@@ -1004,6 +1004,28 @@ describe('Pool', function () {
 
             // expect a successful acquisition
             pool.acquire(done);
+        });
+    });
+
+    it('should end gracefully with pending requests that time out', function (done) {
+        var num = 0;
+        pool = new Pool({
+            acquire: function (cb) {
+                if (num++ >= 1) { return; }
+                cb(null, num);
+            },
+            dispose: disposeStub,
+            acquireTimeout: 50,
+            requestTimeout: 100,
+            min: 0
+        });
+
+        pool.acquire(function (err, res) {
+            (err === null).should.be.ok;
+            pool.acquire(function (err, res) {
+                err.should.match(/Pool was destroyed/);
+            });
+            pool.end(done);
         });
     });
 });
