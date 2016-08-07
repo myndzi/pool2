@@ -984,4 +984,26 @@ describe('Pool', function () {
             }, 75);
         });
     });
+
+    it('should not spin idle with pending requests due to min 0 (issue #25)', function (done) {
+        var num = 0;
+        pool = new Pool({
+            acquire: function (cb) {
+                if (num++ === 1) { return; }
+                cb(null, num);
+            },
+            dispose: noop,
+            acquireTimeout: 50,
+            min: 0,
+            max: 1
+        });
+
+        pool.acquire(function (err, res) {
+            // succeed first, to set the pool 'live'
+            pool.destroy(res); // ensure we flush the pool to 0 resources
+
+            // expect a successful acquisition
+            pool.acquire(done);
+        });
+    });
 });
