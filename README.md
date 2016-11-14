@@ -31,7 +31,7 @@ The values below are the defaults
         syncInterval: 10*1000,
 
         backoff: { },
-        bailAfter: 0       
+        bailAfter: 0
     });
 
     pool.acquire(function (err, rsrc) {
@@ -62,6 +62,8 @@ The values below are the defaults
 
 ### acquire
 Required. The function that acquires a resource (e.g. opens a database connection) on behalf of the pool. Accepts a node-style callback.
+
+You may return a function from acquire; if you do, it will be called if an acquire attempt times out, to allow you to clean up.
 
 ### acquireTimeout
 An integer, in milliseconds, to specify how long to wait for a call to `acquire` before failing.

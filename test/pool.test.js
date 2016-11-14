@@ -1028,4 +1028,50 @@ describe('Pool', function () {
             pool.end(done);
         });
     });
+
+    it('should not leak resources when acquire times out', function (done) {
+        var open = 0;
+
+        pool = new Pool({
+            acquire: function (cb) {
+                open++;
+                return function () {
+                    open--;
+                };
+            },
+            dispose: disposeStub,
+            acquireTimeout: 20
+        });
+
+
+        pool.acquire(function (err, res) {
+            err.should.match(/timed out/);
+            open.should.equal(0);
+            done();
+        });
+    });
+
+    it('should emit warnings if the acquire disposer fails', function (done) {
+        pool = new Pool({
+            acquire: function (cb) {
+                return function () {
+                    throw 'foo';
+                };
+            },
+            dispose: disposeStub,
+            acquireTimeout: 20
+        });
+
+        pool.once('warn', function (e) {
+            e.should.equal('foo');
+        });
+        pool.once('error', function (e) {
+            e.should.match(/Timed out/);
+            done();
+        });
+
+        pool.acquire(function (err, res) {
+            err.should.match(/timed out/);
+        });
+    });
 });
