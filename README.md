@@ -9,7 +9,7 @@ The values below are the defaults
     var Pool = require('pool2');
     var pool = new Pool({
         acquire: function (cb) { cb(null, resource); },
-        acquireTimeout: 30*1000,
+        acquireTimeout: 30*1000, // please see note below
 
         dispose: function (res, cb) { cb(); },
         disposeTimeout: 30*1000,
@@ -63,10 +63,23 @@ The values below are the defaults
 ### acquire
 Required. The function that acquires a resource (e.g. opens a database connection) on behalf of the pool. Accepts a node-style callback.
 
-You may return a function from acquire; if you do, it will be called if an acquire attempt times out, to allow you to clean up.
-
 ### acquireTimeout
 An integer, in milliseconds, to specify how long to wait for a call to `acquire` before failing.
+
+**NOTE**: `acquireTimeout` is the delay after which `pool2` will stop waiting for a resource and move on with its life. This means that it's possible for in-flight resources that have timed out to remain open and exceed the pool maximum. Resources that complete allocation that have timed out this way will have the disposer called on them.
+
+If what you want is for something, e.g. a database connection, or http request, to be *destroyed* after some timeout, you probably want something like this, instead:
+
+```javascript
+  acquire: function (cb) {
+    openThing({ timeout: 2000 })
+      .on('timeout', function () {
+        cb(new Error('Timed out'));
+      });
+  }
+```
+
+This puts the burden of timing out and cleaning up on the library for the resource you are using pool2 to manage; you then *react* to the timeout event and notify pool2 of the failure to acquire the resource.
 
 ### dispose
 Required. The function that disposes of a resource (e.g. gracefully closes a database connection) on behalf of the pool. Accepts the resource to dispose of, which is the same object returned by the acquire function, and a node-style callback.
